@@ -41,12 +41,22 @@ public class GameManager : MonoBehaviour
             Destroy(cube.gameObject);
         }
 
+        // Reset the camera follower
+        CameraFollower follower = Camera.main.GetComponent<CameraFollower>();
+        if (follower != null)
+        {
+            follower.StopFollowing();
+        }
+
+        // Load the level
         LevelManager.Instance.LoadLevel(PlayerPrefs.GetInt("CurrentLevel", 0));
 
-        // Start the timer
+        // Restart timer
         LevelData data = LevelManager.Instance.GetCurrentLevelData();
         currentTimeLeft = data.timeLimitSeconds;
         timerRunning = true;
+
+        Debug.Log("⏱️ Timer reset to: " + currentTimeLeft + " seconds.");
     }
 
     public void SetCurrentCube(CubeBehavior cube)

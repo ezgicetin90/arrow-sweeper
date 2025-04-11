@@ -37,8 +37,15 @@ public class UIManager : MonoBehaviour
         levelCompletePanel.SetActive(false);
         inGameUI.SetActive(true);
 
-        LevelManager.Instance.LoadNextLevel();
+        // Step 1: Advance the level index
+        int nextLevelIndex = PlayerPrefs.GetInt("CurrentLevel", 0) + 1;
+        PlayerPrefs.SetInt("CurrentLevel", nextLevelIndex);
+        PlayerPrefs.Save();
+
+        // Step 2: Start the new level properly
+        GameManager.Instance.StartLevel();
     }
+
     
     public void ShowLevelFail()
     {
