@@ -7,6 +7,7 @@ public class GameManager : MonoBehaviour
 
     private float currentTimeLeft;
     private bool timerRunning = false;
+    private bool cameraFrozen = false;
 
     private void Awake()
     {
@@ -19,8 +20,6 @@ public class GameManager : MonoBehaviour
         if (!timerRunning) return;
 
         currentTimeLeft -= Time.deltaTime;
-
-        // Optional: Add a UI bar update here
 
         if (currentTimeLeft <= 0)
         {
@@ -35,23 +34,17 @@ public class GameManager : MonoBehaviour
     {
         Debug.Log("🌑 Starting level from GameManager...");
 
-        // 🧹 Clean up old cubes
         foreach (var cube in FindObjectsOfType<CubeBehavior>())
         {
             Destroy(cube.gameObject);
         }
 
-        // Reset the camera follower
-        CameraFollower follower = Camera.main.GetComponent<CameraFollower>();
-        if (follower != null)
-        {
-            follower.StopFollowing();
-        }
+        // Reset frozen state
+        cameraFrozen = false;
 
         // Load the level
         LevelManager.Instance.LoadLevel(PlayerPrefs.GetInt("CurrentLevel", 0));
 
-        // Restart timer
         LevelData data = LevelManager.Instance.GetCurrentLevelData();
         currentTimeLeft = data.timeLimitSeconds;
         timerRunning = true;
@@ -63,21 +56,14 @@ public class GameManager : MonoBehaviour
     {
         currentCube = cube;
 
-        // Move the camera to the top cube's Y
-        if (Camera.main != null)
+        if (!cameraFrozen && Camera.main != null && currentCube != null)
         {
-            Vector3 camPos = Camera.main.transform.position;
-            camPos.y = currentCube.transform.position.y;
-            Camera.main.transform.position = camPos;
+            CameraFollower follower = Camera.main.GetComponent<CameraFollower>();
+            if (follower != null)
+            {
+                follower.SetTarget(currentCube.transform);
+            }
         }
-
-        // Smooth follow
-        CameraFollower follower = Camera.main.GetComponent<CameraFollower>();
-        if (follower != null)
-        {
-            follower.SetTarget(currentCube.transform);
-        }
-
     }
 
     public bool IsCubeActive(CubeBehavior cube)
@@ -88,48 +74,63 @@ public class GameManager : MonoBehaviour
     public void AdvanceToNextCube(CubeBehavior nextCube)
     {
         currentCube = nextCube;
+
+        if (!cameraFrozen && Camera.main != null && currentCube != null)
+        {
+            CameraFollower follower = Camera.main.GetComponent<CameraFollower>();
+            if (follower != null)
+            {
+                follower.SetTarget(currentCube.transform);
+            }
+        }
     }
 
     public void CubeCleared(CubeBehavior clearedCube)
     {
-        // Stop timer if stack is cleared
         CubeBehavior[] remainingCubes = FindObjectsOfType<CubeBehavior>();
 
-        if (remainingCubes.Length <= 1) // Last cube was just cleared
+        if (remainingCubes.Length <= 1)
         {
             Debug.Log("Stack cleared!");
             timerRunning = false;
 
-            Camera.main.GetComponent<CameraFollower>()?.StopFollowing();
-
             UIManager ui = FindObjectOfType<UIManager>();
-            if (ui != null)
+            ui?.ShowLevelComplete();
+            return;
+        }
+
+        // Stop camera follow when 5 or fewer cubes remain
+        if (remainingCubes.Length <= 10 && !cameraFrozen)
+        {
+            CameraFollower follower = Camera.main.GetComponent<CameraFollower>();
+            if (follower != null)
             {
-                ui.ShowLevelComplete();
+                follower.SetTarget(null);
+            }
+
+            cameraFrozen = true;
+            Debug.Log("🛑 Camera stopped following at 10 cubes.");
+        }
+
+        // Find next cube to focus on
+        CubeBehavior next = null;
+        float closestY = float.MinValue;
+
+        foreach (var cube in remainingCubes)
+        {
+            if (cube == clearedCube) continue;
+            float diff = cube.transform.position.y - clearedCube.transform.position.y;
+
+            if (diff < 0 && diff > closestY)
+            {
+                closestY = diff;
+                next = cube;
             }
         }
-        else
+
+        if (next != null)
         {
-            // Find next cube to focus on
-            CubeBehavior next = null;
-            float closestY = float.MinValue;
-
-            foreach (var cube in remainingCubes)
-            {
-                if (cube == clearedCube) continue;
-                float diff = cube.transform.position.y - clearedCube.transform.position.y;
-
-                if (diff < 0 && diff > closestY)
-                {
-                    closestY = diff;
-                    next = cube;
-                }
-            }
-
-            if (next != null)
-            {
-                AdvanceToNextCube(next);
-            }
+            AdvanceToNextCube(next);
         }
     }
 }

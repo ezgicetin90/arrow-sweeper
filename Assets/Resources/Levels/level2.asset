@@ -16,5 +16,6 @@ MonoBehaviour:
   skyboxColor: {r: 0.57254905, g: 0.7141557, b: 1, a: 0}
   cubeColor: {r: 0.5188679, g: 0.06608224, b: 0.36906308, a: 0}
   spriteColor: {r: 0.9056604, g: 0.10679956, b: 0.10679956, a: 0}
-  stackHeight: 10
+  stackHeight: 20
   difficulty: 0
+  timeLimitSeconds: 10

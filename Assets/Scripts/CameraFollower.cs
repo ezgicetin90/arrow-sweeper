@@ -2,38 +2,50 @@ using UnityEngine;
 
 public class CameraFollower : MonoBehaviour
 {
-    public Transform target;
+    public Transform anchorTarget;
     public float followSpeed = 5f;
-    public float stopFollowHeight = 0f;
+    public float yOffset = 5f;
+    public float zOffset = -6f;
+
+    private Vector3 velocity = Vector3.zero;
     private bool isFollowing = true;
+
+    private void Start()
+    {
+        AdjustOrthographicSize();
+    }
 
     public void SetTarget(Transform newTarget)
     {
-        target = newTarget;
-        isFollowing = true;
-    }
-
-    public void StopFollowing()
-    {
-        isFollowing = false;
+        anchorTarget = newTarget;
+        isFollowing = (newTarget != null);
     }
 
     void LateUpdate()
     {
-        if (!isFollowing || target == null) return;
+        if (!isFollowing || anchorTarget == null) return;
 
-        float cameraY = transform.position.y;
-        float targetY = target.position.y;
+        Vector3 desiredPos = new Vector3(
+            anchorTarget.position.x,
+            anchorTarget.position.y + yOffset,
+            anchorTarget.position.z + zOffset
+        );
 
-        // Stop when camera reaches stopFollowHeight
-        if (targetY <= stopFollowHeight)
+        transform.position = Vector3.SmoothDamp(transform.position, desiredPos, ref velocity, 1f / followSpeed);
+    }
+
+    private void AdjustOrthographicSize()
+    {
+        Camera cam = GetComponent<Camera>();
+        if (cam == null || !cam.orthographic) return;
+
+        float referenceAspect = 9f / 16f; // Target aspect ratio
+        float currentAspect = (float)Screen.width / Screen.height;
+        float scaleFactor = currentAspect / referenceAspect;
+
+        if (scaleFactor < 1f)
         {
-            isFollowing = false;
-            return;
+            cam.orthographicSize = cam.orthographicSize / scaleFactor;
         }
-
-        Vector3 pos = transform.position;
-        pos.y = Mathf.Lerp(cameraY, targetY, followSpeed * Time.deltaTime);
-        transform.position = pos;
     }
 }
